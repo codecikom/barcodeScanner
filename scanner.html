@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pemindai IMEI - Stok Konter HP</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 20px; background: #f1f5f9; color: #1e293b;
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 520px; margin: 0 auto; background: #fff; padding: 20px;
+      border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    }
+    h2 { margin: 0 0 8px; font-size: 20px; }
+    p { color: #475569; line-height: 1.5; }
+    #reader { width: 100%; margin: 16px 0; }
+    button {
+      width: 100%; padding: 13px; border: 0; border-radius: 9px;
+      color: white; background: #2563eb; font-size: 16px; font-weight: 700;
+      margin-top: 10px; cursor: pointer;
+    }
+    button.secondary { background: #475569; }
+    #status {
+      padding: 12px; border-radius: 8px; background: #eff6ff;
+      color: #1e40af; line-height: 1.5; overflow-wrap: anywhere;
+    }
+    #result { font-weight: 700; font-size: 18px; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+<main>
+  <h2>📷 Pemindai IMEI</h2>
+  <p>Arahkan kamera ke barcode pada dus HP. Setelah terbaca, IMEI akan dikirim kembali ke aplikasi Stok Konter HP.</p>
+  <div id="status">Menyiapkan kamera… Jika diminta, pilih <b>Allow / Izinkan</b>.</div>
+  <div id="reader"></div>
+  <div id="result"></div>
+  <button id="startBtn" type="button" onclick="startCamera()">Mulai / Buka Kamera</button>
+  <button class="secondary" type="button" onclick="closeScanner()">Tutup Pemindai</button>
+</main>
+
+<script>
+  let scanner = null;
+  let busy = false;
+
+  const statusBox = document.getElementById('status');
+  const resultBox = document.getElementById('result');
+  const startBtn = document.getElementById('startBtn');
+
+  function setStatus(message) {
+    statusBox.textContent = message;
+  }
+
+  async function startCamera() {
+    if (busy) return;
+    busy = true;
+    startBtn.disabled = true;
+    setStatus('Meminta akses kamera…');
+
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Browser tidak menyediakan akses kamera. Buka halaman ini melalui HTTPS di Chrome.');
+      }
+
+      if (!scanner) {
+        scanner = new Html5Qrcode('reader', {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.DATA_MATRIX,
+            Html5QrcodeSupportedFormats.PDF_417
+          ],
+          verbose: false
+        });
+      }
+
+      await scanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 280, height: 150 }, aspectRatio: 1.777 },
+        async (decodedText) => {
+          if (!decodedText || !window.opener || window.opener.closed) {
+            setStatus('Barcode terbaca, tetapi tab aplikasi asal tidak ditemukan. Buka pemindai dari tombol Scan di aplikasi.');
+            resultBox.textContent = decodedText || '';
+            return;
+          }
+
+          resultBox.textContent = 'IMEI terbaca: ' + decodedText;
+          setStatus('Berhasil! Mengirim IMEI ke aplikasi…');
+
+          try { await scanner.stop(); } catch (e) {}
+          window.opener.postMessage(
+            { type: 'STOK_KONTER_IMEI_SCANNED', imei: decodedText },
+            '*'
+          );
+
+          setTimeout(() => window.close(), 500);
+        },
+        () => {}
+      );
+
+      setStatus('Kamera aktif. Arahkan barcode ke dalam kotak pemindai.');
+    } catch (err) {
+      console.error('Scanner error:', err);
+      const detail = (err && err.name ? err.name + ': ' : '') + (err && err.message ? err.message : String(err));
+      setStatus('Kamera gagal dibuka — ' + detail + '. Periksa izin kamera untuk situs GitHub Pages ini.');
+    } finally {
+      busy = false;
+      startBtn.disabled = false;
+    }
+  }
+
+  async function closeScanner() {
+    if (scanner && scanner.isScanning) {
+      try { await scanner.stop(); } catch (e) {}
+    }
+    window.close();
+  }
+
+  // Mulai otomatis setelah halaman dibuka; jika browser tidak mengizinkan,
+  // pengguna tetap dapat menekan tombol Mulai / Buka Kamera.
+  window.addEventListener('load', () => {
+    startCamera();
+  });
+</script>
+</body>
+</html>
