@@ -172,33 +172,38 @@ function makeCropCanvas(){
   const boxW = r.w * wRect.width;
   const boxH = r.h * wRect.height;
   
-  // Ubah posisi layar menjadi posisi pixel video asli
-  let sw = (boxW / renderW) * vW;
-  let sh = (boxH / renderH) * vH;
-  let sx = (boxX / renderW) * vW;
-  let sy = (boxY / renderH) * vH;
+  // Ubah posisi layar menjadi posisi pixel video asli (Sebelum di zoom)
+  let raw_w = (boxW / renderW) * vW;
+  let raw_h = (boxH / renderH) * vH;
+  let raw_x = (boxX / renderW) * vW;
+  let raw_y = (boxY / renderH) * vH;
 
-  // Terapkan efek zoom pada area yang diambil
-  const baseCenterX = sx + (sw / 2);
-  const baseCenterY = sy + (sh / 2);
+  // Terapkan efek zoom pada area pengambilan gambar
+  const centerX = raw_x + (raw_w / 2);
+  const centerY = raw_y + (raw_h / 2);
   
-  sw = sw / z;
-  sh = sh / z;
+  const cropW = raw_w / z;
+  const cropH = raw_h / z;
   
-  sx = Math.max(0, Math.min(vW - sw, baseCenterX - (sw / 2)));
-  sy = Math.max(0, Math.min(vH - sh, baseCenterY - (sh / 2)));
+  const cropX = Math.max(0, Math.min(vW - cropW, centerX - (cropW / 2)));
+  const cropY = Math.max(0, Math.min(vH - cropH, centerY - (cropH / 2)));
 
-  // Siapkan canvas untuk dikirim ke mesin pembaca
-  const upscale = Math.min(3, 2400/Math.max(sw, sh));
+  // KUNCI PERBAIKAN: Selalu perbesar hasil crop ke resolusi tinggi agar mesin bisa baca
+  // Jangan biarkan resolusi mengecil hanya karena area crop-nya kecil (di-zoom)
+  const targetWidth = 1200; 
+  const scaleFactor = targetWidth / cropW;
+  
   const c=document.createElement('canvas');
-  c.width=Math.max(1,Math.round(sw*upscale)); 
-  c.height=Math.max(1,Math.round(sh*upscale));
+  c.width = targetWidth;
+  c.height = Math.round(cropH * scaleFactor);
   
   const ctx=c.getContext('2d',{willReadFrequently:true});
   ctx.imageSmoothingEnabled=true; 
   ctx.imageSmoothingQuality='high';
   ctx.filter='grayscale(1) contrast(1.45)';
-  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  
+  // Gambar area yang di-crop dan langsung besarkan ke ukuran canvas
+  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, c.width, c.height);
   ctx.filter='none';
   
   return c;
@@ -232,7 +237,9 @@ async function ensureWorker(){
 async function scanLoop(token){
   if(!running||token!==loopToken)return;
   const canvas=makeCropCanvas();
+  
   if(canvas){
+    // 1. Barcode Detector (Jalan terus setiap 650ms tanpa jeda)
     if('BarcodeDetector'in window&&!barcodeBusy){
       barcodeBusy=true;
       try{
@@ -243,8 +250,11 @@ async function scanLoop(token){
       }catch(e){}
       finally{barcodeBusy=false}
     }
-    if(!ocrBusy&&Date.now()-lastOcrAt>1800){
-      ocrBusy=true; lastOcrAt=Date.now();
+
+    // 2. OCR (Diberi jeda 2 detik agar tidak tabrakan antar proses)
+    if(!ocrBusy&&Date.now()-lastOcrAt>2000){
+      ocrBusy=true; 
+      lastOcrAt=Date.now();
       try{
         const w=await ensureWorker();
         if(running&&token===loopToken){
@@ -252,10 +262,15 @@ async function scanLoop(token){
           const txt=res?.data?.text||'';
           extractLongDigits(txt).forEach(v=>addCandidate(v,'OCR (>10 digit)'));
         }
-      }catch(e){console.warn(e)}
-      finally{ocrBusy=false}
+      }catch(e){
+        console.warn(e);
+      }finally{
+        ocrBusy=false;
+      }
     }
   }
+  
+  // Looping terus berjalan selama kamera aktif
   if(running&&token===loopToken)setTimeout(()=>scanLoop(token),650);
 }
 
