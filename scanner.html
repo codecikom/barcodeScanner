@@ -34,11 +34,11 @@
 <body>
 <main>
   <h2>📷 Pemindai IMEI</h2>
-  <p>Arahkan kamera ke barcode IMEI 1. Hasil tidak langsung dikirim: periksa angkanya terlebih dahulu, lalu tekan Gunakan IMEI. Barcode selain kandidat 15 digit akan diabaikan.</p>
+  <p>Arahkan kamera ke barcode pada dus. Apa pun teks barcode yang terbaca akan ditampilkan; periksa dan pilih sendiri apakah itu IMEI 1.</p>
   <div id="status">Menyiapkan kamera… Jika diminta, pilih <b>Allow / Izinkan</b>.</div>
   <div id="reader"></div>
   <div id="result"></div>
-  <button id="useBtn" type="button" onclick="useCandidate()" disabled>Gunakan IMEI ini</button>
+  <button id="useBtn" type="button" onclick="useCandidate()" disabled>Gunakan Hasil</button>
   <button class="secondary" id="rescanBtn" type="button" onclick="resumeCamera()" disabled>Scan ulang</button>
   <button id="startBtn" type="button" onclick="startCamera()">Mulai / Buka Kamera</button>
   <button class="secondary" type="button" onclick="closeScanner()">Tutup Pemindai</button>
@@ -92,21 +92,18 @@
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 280, height: 150 }, aspectRatio: 1.777 },
         async (decodedText) => {
-          const digits = String(decodedText || '').replace(/\D/g, '');
-          if (!/^\d{15}$/.test(digits)) {
-            setStatus('Barcode terbaca, tetapi bukan kandidat IMEI 15 digit. Arahkan ke barcode IMEI 1.');
-            return;
-          }
-          candidateImei = digits;
-          resultBox.textContent = 'Kandidat IMEI: ' + candidateImei;
-          setStatus('Periksa angka dan cocokkan dengan tulisan IMEI 1 pada dus. Hasil belum dikirim.');
+          const value = String(decodedText || '').trim();
+          if (!value) return;
+          candidateImei = value;
+          resultBox.textContent = 'Hasil terbaca: ' + candidateImei;
+          setStatus('Periksa hasil ini. Jika sesuai dengan tulisan IMEI 1 pada dus, tekan Gunakan Hasil. Jika bukan, tekan Scan ulang.');
           try { await scanner.pause(true); } catch (e) {}
           useBtn.disabled = false;
           rescanBtn.disabled = false;
         },
         () => {}
       );
-      setStatus('Kamera aktif. Arahkan ke barcode IMEI 1.');
+      setStatus('Kamera aktif. Arahkan ke barcode pada dus.');
     } catch (err) {
       console.error('Scanner error:', err);
       const detail = (err && err.name ? err.name + ': ' : '') + (err && err.message ? err.message : String(err));
@@ -119,7 +116,7 @@
 
 
   async function useCandidate() {
-    if (!/^\d{15}$/.test(candidateImei)) return;
+    if (!candidateImei) return;
     if (!window.opener || window.opener.closed) {
       setStatus('Aplikasi asal tidak ditemukan. Buka pemindai dari tombol Scan di aplikasi.');
       return;
@@ -135,7 +132,7 @@
     resultBox.textContent = '';
     useBtn.disabled = true;
     rescanBtn.disabled = true;
-    try { if (scanner) await scanner.resume(); setStatus('Kamera aktif kembali. Arahkan ke barcode IMEI 1.'); }
+    try { if (scanner) await scanner.resume(); setStatus('Kamera aktif kembali. Arahkan ke barcode yang ingin dibaca.'); }
     catch (e) { setStatus('Tidak bisa melanjutkan kamera. Tekan Mulai / Buka Kamera.'); }
   }
 
