@@ -2,18 +2,18 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Scan IMEI v3.1 - Stok HP MGS</title>
+<title>Scan IMEI - Stok HP MGS</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;padding:12px;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}main{max-width:560px;margin:auto;background:#fff;padding:14px;border-radius:14px;box-shadow:0 2px 10px #0001}h2{font-size:20px;margin:0 0 6px}p{font-size:13px;line-height:1.45;color:#475569;margin:6px 0 12px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}button{border:0;border-radius:9px;padding:12px 9px;font-size:14px;font-weight:700;background:#2563eb;color:white}button:disabled{opacity:.45}.green{background:#15803d}.gray{background:#475569}.red{background:#b91c1c}#status{padding:10px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:13px;line-height:1.4;margin:10px 0}
 
-/* HANYA BARIS INI YANG BERUBAH: Penambahan max-height: 40vh agar kamera tidak terlalu tinggi */
+/* mengurangi tinggi kamera */
 .camera-wrap{position:relative;width:100%;aspect-ratio:4/3;max-height:40vh;background:#0f172a;border-radius:10px;overflow:hidden;touch-action:none}
 
 #video{width:100%;height:100%;object-fit:fill;display:block}.shade{position:absolute;inset:0;pointer-events:none;background:rgba(0,0,0,.38)}#cropBox{position:absolute;left:18%;top:34%;width:64%;height:30%;border:2px solid #39f56a;box-shadow:0 0 0 999px rgba(0,0,0,.30);background:rgba(34,197,94,.08);touch-action:none;cursor:move}#cropBox:before{content:'AREA SCAN';position:absolute;top:-23px;left:0;color:#39f56a;font-size:11px;font-weight:bold;text-shadow:0 1px 2px #000}#cropBox:after{content:'';position:absolute;right:-5px;bottom:-5px;width:20px;height:20px;border-right:5px solid #39f56a;border-bottom:5px solid #39f56a}#cropBox .handle{position:absolute;right:-12px;bottom:-12px;width:34px;height:34px;z-index:2;touch-action:none}.control{margin:12px 0}.control label{display:flex;justify-content:space-between;font-size:12px;font-weight:bold;color:#334155;margin-bottom:5px}.control input{width:100%;margin:0}#count{font-weight:bold;margin:12px 0 6px}.item{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #cbd5e1;border-radius:9px;margin:7px 0}.item.selected{border:2px solid #16a34a;background:#f0fdf4}.val{flex:1;overflow-wrap:anywhere;font-weight:bold;font-size:15px}.meta{font-size:11px;color:#64748b;margin-top:3px}.pick{padding:9px 12px;width:auto;background:#475569}input[type=text]{width:100%;padding:12px;border:1px solid #94a3b8;border-radius:9px;font-size:16px;margin-top:6px}.small{font-size:12px;color:#64748b}
 </style></head><body><main>
 
-<h2>📷 Scan IMEI v3.1</h2><p>Geser kotak hijau ke label IMEI. Tarik sudut kanan bawah untuk mengubah ukurannya. Atur zoom agar tulisan di dalam kotak lebih besar.</p>
+<h2>📷 Scan IMEI</h2><p>Geser kotak hijau ke label IMEI. Tarik sudut kanan bawah untuk mengubah ukurannya. Atur zoom agar tulisan di dalam kotak lebih besar.</p>
 
 <div class="actions"><button id="startBtn" onclick="startCamera()">Mulai Kamera</button><button id="stopBtn" class="gray" onclick="stopCamera()" disabled>Jeda / Stop</button></div>
 
