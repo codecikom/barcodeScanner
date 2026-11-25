@@ -17,7 +17,7 @@ button:disabled{opacity:.42;cursor:not-allowed}
 .green{background:#15803d}
 .gray{background:#475569}
 .red{background:#b91c1c}
-#status{padding:11px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:14px;line-height:1.4;margin:10px 0}
+#status{padding:11px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:14px;line-height:1.4;margin:10px 0;word-break:break-word}
 #reader{width:100%;min-height:220px;border:1px solid #cbd5e1;border-radius:10px;overflow:hidden;background:#0f172a}
 #reader video{object-fit:cover}
 #count{font-weight:700;margin:12px 0 6px}
@@ -33,23 +33,23 @@ input{width:100%;padding:12px;border:1px solid #94a3b8;border-radius:9px;font-si
 <body>
 <main>
 <h2>📷 Scan Barcode IMEI</h2>
-<p>Arahkan <b>kotak bidik di tengah</b> tepat ke <b>satu baris barcode IMEI</b>. Tahan sebentar agar terbaca stabil dan tidak menyambar barcode lain.</p>
+<p>Tekan <b>Mulai Kamera</b>, lalu arahkan kotak bidik ke satu baris barcode IMEI.</p>
 <div class="actions">
-<button id="startBtn" onclick="startScan()">Mulai Kamera</button>
-<button id="stopBtn" class="gray" onclick="stopScan()" disabled>Jeda / Stop</button>
+<button id="startBtn" type="button" onclick="startScan()">Mulai Kamera</button>
+<button id="stopBtn" type="button" class="gray" onclick="stopScan()" disabled>Jeda / Stop</button>
 </div>
 <div id="status">Kamera belum dibuka. Tekan Mulai Kamera untuk memulai.</div>
 <div id="reader"></div>
 <div id="count">0 barcode terbaca</div>
 <div id="results"><div class="small">Hasil scan akan muncul di sini.</div></div>
 <div class="actions">
-<button id="sendBtn" class="green" onclick="sendSelected()" disabled>Gunakan Pilihan</button>
-<button class="gray" onclick="clearResults()">Hapus Hasil</button>
+<button id="sendBtn" type="button" class="green" onclick="sendSelected()" disabled>Gunakan Pilihan</button>
+<button type="button" class="gray" onclick="clearResults()">Hapus Hasil</button>
 </div>
 <p><b>Jika barcode tidak terbaca:</b> kamu tetap bisa memasukkan IMEI secara manual.</p>
 <input id="manual" inputmode="numeric" placeholder="Ketik IMEI 1 di sini">
-<button class="green" style="width:100%;margin-top:8px" onclick="sendManual()">Gunakan IMEI Manual</button>
-<button class="red" style="width:100%;margin-top:8px" onclick="closeScanner()">Tutup Pemindai</button>
+<button type="button" class="green" style="width:100%;margin-top:8px" onclick="sendManual()">Gunakan IMEI Manual</button>
+<button type="button" class="red" style="width:100%;margin-top:8px" onclick="closeScanner()">Tutup Pemindai</button>
 </main>
 
 <script>
@@ -59,7 +59,6 @@ let busy = false;
 let values = [];
 let selected = '';
 
-// Stabilisasi: kode baru masuk daftar setelah terbaca 2x berturut-turut dalam jeda singkat
 let lastRaw = '';
 let lastRawTime = 0;
 let rawStreak = 0;
@@ -69,6 +68,10 @@ const $ = id => document.getElementById(id);
 function status(t) {
   $('status').textContent = t;
 }
+
+window.onerror = function(msg, url, line) {
+  status('Error skrip (baris ' + line + '): ' + msg);
+};
 
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({
@@ -85,7 +88,7 @@ function render() {
             ${esc(v)}
             <div class="meta">Hasil ${i + 1}${/^\d{15}$/.test(v) ? ' · IMEI (15 digit)' : ''}</div>
           </div>
-          <button class="pick" onclick="choose(${i})">Pilih</button>
+          <button type="button" class="pick" onclick="choose(${i})">Pilih</button>
         </div>
       `).join('')
     : '<div class="small">Belum ada barcode yang terbaca.</div>';
@@ -105,7 +108,6 @@ function decoded(text) {
   }
   lastRawTime = now;
 
-  // Butuh 2 kali pembacaan konsisten agar tidak langsung menyambar barcode lewat
   if (rawStreak < 2) return;
   rawStreak = 0;
 
@@ -123,48 +125,29 @@ async function startScan() {
   if (busy || running) return;
   busy = true;
   $('startBtn').disabled = true;
-  status('Mengaktifkan kamera… izinkan akses kamera jika diminta.');
+  status('Tombol ditekan. Mengaktifkan kamera...');
 
   try {
-    if (!window.Html5Qrcode) {
-      throw new Error('Library pemindai gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.');
-    }
-    if (!scanner) {
-      const formats = [
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.CODE_93,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.ITF,
-        Html5QrcodeSupportedFormats.DATA_MATRIX,
-        Html5QrcodeSupportedFormats.QR_CODE
-      ];
-      scanner = new Html5Qrcode('reader', { formatsToSupport: formats, verbose: false });
+    if (typeof Html5Qrcode === 'undefined') {
+      throw new Error('Library Html5Qrcode belum termuat. Cek koneksi internet atau muat ulang halaman.');
     }
 
-    // Kotak bidik horizontal tipis agar fokus ke satu baris barcode IMEI
-    const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
-      const boxWidth = Math.max(180, Math.min(340, Math.floor(viewfinderWidth * 0.82)));
-      const boxHeight = Math.max(54, Math.min(92, Math.floor(viewfinderHeight * 0.24)));
-      return { width: boxWidth, height: boxHeight };
-    };
+    if (!scanner) {
+      scanner = new Html5Qrcode('reader', false);
+    }
 
     await scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: qrboxFunction, aspectRatio: 1.0 },
+      { fps: 10, qrbox: { width: 280, height: 80 } },
       decoded,
       () => {}
     );
 
     running = true;
     $('stopBtn').disabled = false;
-    status('Kamera aktif. Arahkan garis kotak tengah tepat ke barcode IMEI dan tahan sebentar.');
+    status('Kamera aktif. Arahkan kotak bidik ke satu garis barcode IMEI.');
   } catch (e) {
-    console.error(e);
-    status('Gagal membuka pemindai: ' + (e.message || e) + '. Pastikan halaman dibuka melalui HTTPS dan izin kamera diizinkan.');
+    status('Gagal membuka kamera: ' + (e && e.message ? e.message : String(e)));
   } finally {
     busy = false;
     $('startBtn').disabled = running;
@@ -178,16 +161,16 @@ async function stopScan() {
     running = false;
     $('startBtn').disabled = false;
     $('stopBtn').disabled = true;
-    status('Kamera dihentikan. Pilih hasil yang sudah terbaca atau tekan Mulai Kamera lagi.');
+    status('Kamera dihentikan.');
   } catch (e) {
-    status('Kamera tidak berhasil dihentikan: ' + (e.message || e));
+    status('Gagal menghentikan kamera: ' + (e && e.message ? e.message : String(e)));
   }
 }
 
 function choose(i) {
   selected = values[i] || '';
   render();
-  status('Dipilih: ' + selected + '. Pastikan cocok dengan tulisan IMEI 1 pada dus.');
+  status('Dipilih: ' + selected);
 }
 
 function clearResults() {
@@ -196,17 +179,23 @@ function clearResults() {
   lastRaw = '';
   rawStreak = 0;
   render();
-  status('Daftar hasil dikosongkan. Kamera ' + (running ? 'tetap aktif.' : 'belum aktif.'));
+  status('Daftar hasil dikosongkan.');
 }
 
-function sendValue(v) {
+async function sendValue(v) {
   v = String(v || '').trim();
   if (!v) {
     status('Belum ada nilai untuk dikirim.');
     return;
   }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(v);
+    }
+  } catch (e) {}
+
   if (!window.opener || window.opener.closed) {
-    status('Aplikasi stok tidak ditemukan. Buka pemindai dari tombol Scan di aplikasi.');
+    status('IMEI disalin (' + v + '). Silakan tempel di aplikasi stok.');
     return;
   }
   window.opener.postMessage({ type: 'STOK_KONTER_IMEI_SCANNED', imei: v }, '*');
