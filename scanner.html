@@ -1,308 +1,78 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Scan IMEI v3.0 - Stok HP MGS</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Scan IMEI v3.1 - Stok HP MGS</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
-*{box-sizing:border-box}
-body{margin:0;padding:12px;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}
-main{max-width:560px;margin:auto;background:#fff;padding:14px;border-radius:14px;box-shadow:0 2px 10px #0001}
-h2{font-size:18px;margin:0 0 6px}
-p{font-size:12px;line-height:1.45;color:#475569;margin:6px 0 10px}
-.ver-badge {background:#ef4444;color:white;padding:2px 6px;border-radius:4px;font-size:10px;vertical-align:middle;margin-left:6px;}
+*{box-sizing:border-box}body{margin:0;padding:12px;background:#f1f5f9;color:#172033;font-family:Arial,sans-serif}main{max-width:560px;margin:auto;background:#fff;padding:14px;border-radius:14px;box-shadow:0 2px 10px #0001}h2{font-size:20px;margin:0 0 6px}p{font-size:13px;line-height:1.45;color:#475569;margin:6px 0 12px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}button{border:0;border-radius:9px;padding:12px 9px;font-size:14px;font-weight:700;background:#2563eb;color:white}button:disabled{opacity:.45}.green{background:#15803d}.gray{background:#475569}.red{background:#b91c1c}#status{padding:10px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:13px;line-height:1.4;margin:10px 0}
 
-/* Container kamera */
-.camera-wrap{
-  position:relative;
-  width:100%;
-  height: 35vh;
-  min-height: 220px;
-  max-height: 350px;
-  background:#0f172a;
-  border-radius:10px;
-  overflow:hidden;
-  touch-action:none;
-  margin-bottom:8px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
+/* HANYA BARIS INI YANG BERUBAH: Penambahan max-height: 40vh agar kamera tidak terlalu tinggi */
+.camera-wrap{position:relative;width:100%;aspect-ratio:4/3;max-height:40vh;background:#0f172a;border-radius:10px;overflow:hidden;touch-action:none}
 
-/* Video asli */
-#video{
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display:block;
-  pointer-events: none; 
-}
+#video{width:100%;height:100%;object-fit:fill;display:block}.shade{position:absolute;inset:0;pointer-events:none;background:rgba(0,0,0,.38)}#cropBox{position:absolute;left:18%;top:34%;width:64%;height:30%;border:2px solid #39f56a;box-shadow:0 0 0 999px rgba(0,0,0,.30);background:rgba(34,197,94,.08);touch-action:none;cursor:move}#cropBox:before{content:'AREA SCAN';position:absolute;top:-23px;left:0;color:#39f56a;font-size:11px;font-weight:bold;text-shadow:0 1px 2px #000}#cropBox:after{content:'';position:absolute;right:-5px;bottom:-5px;width:20px;height:20px;border-right:5px solid #39f56a;border-bottom:5px solid #39f56a}#cropBox .handle{position:absolute;right:-12px;bottom:-12px;width:34px;height:34px;z-index:2;touch-action:none}.control{margin:12px 0}.control label{display:flex;justify-content:space-between;font-size:12px;font-weight:bold;color:#334155;margin-bottom:5px}.control input{width:100%;margin:0}#count{font-weight:bold;margin:12px 0 6px}.item{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #cbd5e1;border-radius:9px;margin:7px 0}.item.selected{border:2px solid #16a34a;background:#f0fdf4}.val{flex:1;overflow-wrap:anywhere;font-weight:bold;font-size:15px}.meta{font-size:11px;color:#64748b;margin-top:3px}.pick{padding:9px 12px;width:auto;background:#475569}input[type=text]{width:100%;padding:12px;border:1px solid #94a3b8;border-radius:9px;font-size:16px;margin-top:6px}.small{font-size:12px;color:#64748b}
+</style></head><body><main>
 
-#cropBox{
-  position:absolute;
-  left:10%;
-  top:30%;
-  width:80%;
-  height:40%;
-  border:2px solid #39f56a;
-  box-shadow:0 0 0 999px rgba(0,0,0,.30);
-  background:rgba(34,197,94,.08);
-  touch-action:none;
-  cursor:move;
-  z-index: 10;
-}
-#cropBox:before{content:'AREA SCAN';position:absolute;top:-20px;left:0;color:#39f56a;font-size:10px;font-weight:bold;text-shadow:0 1px 2px #000}
-#cropBox:after{content:'';position:absolute;right:-5px;bottom:-5px;width:16px;height:16px;border-right:4px solid #39f56a;border-bottom:4px solid #39f56a}
-#cropBox .handle{position:absolute;right:-12px;bottom:-12px;width:34px;height:34px;z-index:20;touch-action:none;cursor:nwse-resize}
+<h2>📷 Scan IMEI v3.1</h2><p>Geser kotak hijau ke label IMEI. Tarik sudut kanan bawah untuk mengubah ukurannya. Atur zoom agar tulisan di dalam kotak lebih besar.</p>
 
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
-button{border:0;border-radius:9px;padding:10px 8px;font-size:13px;font-weight:700;background:#2563eb;color:white;cursor:pointer}
-button:disabled{opacity:.45;cursor:not-allowed}
-.green{background:#15803d}.gray{background:#475569}.red{background:#b91c1c}
+<div class="actions"><button id="startBtn" onclick="startCamera()">Mulai Kamera</button><button id="stopBtn" class="gray" onclick="stopCamera()" disabled>Jeda / Stop</button></div>
 
-#status{padding:8px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:12px;line-height:1.4;margin:8px 0}
+<div id="status">Kamera belum dibuka.</div>
 
-.control{margin:8px 0}
-.control label{display:flex;justify-content:space-between;font-size:11px;font-weight:bold;color:#334155;margin-bottom:4px}
-.control input{width:100%;margin:0}
+<div class="camera-wrap" id="cameraWrap"><video id="video" autoplay playsinline muted></video><div id="cropBox"><div class="handle" id="resizeHandle"></div></div></div>
 
-#count{font-weight:bold;margin:10px 0 6px;font-size:13px}
-.item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #cbd5e1;border-radius:9px;margin:6px 0}
-.item.selected{border:2px solid #16a34a;background:#f0fdf4}
-.val{flex:1;overflow-wrap:anywhere;font-weight:bold;font-size:14px}
-.meta{font-size:10px;color:#64748b;margin-top:2px}
-.pick{padding:8px 10px;width:auto;background:#475569;font-size:12px}
-input[type=text]{width:100%;padding:10px;border:1px solid #94a3b8;border-radius:9px;font-size:14px;margin-top:4px}
-.small{font-size:12px;color:#64748b}
-</style>
-</head>
-<body>
-<main>
-  <h2>📷 Scan IMEI <span class="ver-badge">v3.0</span></h2>
-  <p>Geser kotak hijau. Gunakan slider zoom jika teks masih terlalu kecil.</p>
-  
-  <div class="actions">
-    <button id="startBtn" onclick="startCamera()">Mulai Kamera</button>
-    <button id="stopBtn" class="gray" onclick="stopCamera()" disabled>Jeda</button>
-  </div>
-  
-  <div id="status">Kamera belum dibuka.</div>
-  
-  <div class="camera-wrap" id="cameraWrap">
-    <video id="video" autoplay playsinline muted></video>
-    <div id="cropBox"><div class="handle" id="resizeHandle"></div></div>
-  </div>
-  
-  <div class="control">
-    <label><span>Zoom Kamera</span><span id="zoomLabel">1.0×</span></label>
-    <input id="zoom" type="range" min="1" max="4" step="0.5" value="1" oninput="updateZoomLabel(this.value)">
-  </div>
-  
-  <div class="actions">
-    <button id="sendBtn" class="green" onclick="sendSelected()" disabled>Gunakan Pilihan</button>
-    <button class="gray" onclick="clearResults()">Hapus Hasil</button>
-  </div>
-  
-  <div id="count">0 kandidat ditemukan</div>
-  <div id="results"><div class="small">Hasil barcode dan OCR muncul di sini.</div></div>
-  
-  <input id="manual" type="text" inputmode="numeric" placeholder="Ketik IMEI 1 secara manual">
-  <button class="green" style="width:100%;margin-top:6px" onclick="sendManual()">Gunakan IMEI Manual</button>
-  <button class="red" style="width:100%;margin-top:6px" onclick="closeScanner()">Tutup Pemindai</button>
-</main>
+<div class="control"><label><span>Zoom area hijau</span><span id="zoomLabel">1.0×</span></label><input id="zoom" type="range" min="1" max="3" step="0.25" value="1" oninput="updateZoomLabel(this.value)"></div>
 
-<script>
-const $=id=>document.getElementById(id);
-let stream=null, running=false, loopToken=0, ocrWorker=null, ocrBusy=false, barcodeBusy=false, values=[], selected='', lastOcrAt=0;
-const video=$('video'), box=$('cropBox'), wrap=$('cameraWrap');
+<div class="actions"><button id="sendBtn" class="green" onclick="sendSelected()" disabled>Gunakan Pilihan</button><button class="gray" onclick="clearResults()">Hapus Hasil</button></div>
+
+<div id="count">0 kandidat ditemukan</div><div id="results"><div class="small">Hasil barcode dan OCR muncul di sini.</div></div>
+
+<p><b>Catatan:</b> hanya area di dalam kotak hijau yang diproses. Kandidat OCR ditampilkan jika lebih dari 10 digit.</p>
+
+<input id="manual" type="text" inputmode="numeric" placeholder="Ketik IMEI 1 secara manual"><button class="green" style="width:100%;margin-top:8px" onclick="sendManual()">Gunakan IMEI Manual</button><button class="red" style="width:100%;margin-top:8px" onclick="closeScanner()">Tutup Pemindai</button>
+
+</main><script>
+
+const $=id=>document.getElementById(id);let stream=null,running=false,loopToken=0,ocrWorker=null,ocrBusy=false,barcodeBusy=false,values=[],selected='',lastOcrAt=0;const video=$('video'),box=$('cropBox'),wrap=$('cameraWrap');
 
 function status(t){$('status').textContent=t}
-function updateZoomLabel(v){ $('zoomLabel').textContent=Number(v).toFixed(1)+'×'; }
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
-function render(){
-  $('count').textContent=values.length+' kandidat ditemukan';
-  $('results').innerHTML=values.length?values.map((x,i)=>`<div class="item ${selected===x.value?'selected':''}"><div class="val">${esc(x.value)}<div class="meta">${esc(x.sources.join(' + '))}${/^\d{15}$/.test(x.value)?' · IMEI (15 digit)':''}</div></div><button class="pick" onclick="choose(${i})">Pilih</button></div>`).join(''):'<div class="small">Belum ada barcode atau angka OCR yang terbaca.</div>';
-  $('sendBtn').disabled=!selected;
-}
+function updateZoomLabel(v){$('zoomLabel').textContent=Number(v).toFixed(2).replace(/\.?0+$/,'')+'×'}function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
-function addCandidate(v,source){
-  v=String(v||'').replace(/\s+/g,'').trim(); if(!v)return;
-  let old=values.find(x=>x.value===v);
-  if(old){ if(!old.sources.includes(source)){old.sources.push(source);render()} return }
-  values.push({value:v,sources:[source]}); render();
-  status(source+' terbaca: '+v);
-}
+function render(){$('count').textContent=values.length+' kandidat ditemukan';$('results').innerHTML=values.length?values.map((x,i)=>`<div class="item ${selected===x.value?'selected':''}"><div class="val">${esc(x.value)}<div class="meta">${esc(x.sources.join(' + '))}${/^\d{15}$/.test(x.value)?' · kemungkinan IMEI (15 digit)':''}</div></div><button class="pick" onclick="choose(${i})">Pilih</button></div>`).join(''):'<div class="small">Belum ada barcode atau angka OCR yang terbaca.</div>';$('sendBtn').disabled=!selected}
 
-function cropRect(){
-  const r=box.getBoundingClientRect(), w=wrap.getBoundingClientRect();
-  return {x:(r.left-w.left)/w.width, y:(r.top-w.top)/w.height, w:r.width/w.width, h:r.height/w.height};
-}
+function addCandidate(v,source){v=String(v||'').replace(/\s+/g,'').trim();if(!v)return;let old=values.find(x=>x.value===v);if(old){if(!old.sources.includes(source)){old.sources.push(source);render()}return}values.push({value:v,sources:[source]});render();status(source+' terbaca: '+v)}
 
-function makeCropCanvas(){
-  if(!video.videoWidth||!video.videoHeight)return null;
-  const r = cropRect();
-  const z = Number($('zoom').value) || 1;
-  const vW = video.videoWidth, vH = video.videoHeight, wRect = wrap.getBoundingClientRect();
-  
-  const videoAspect = vW / vH, wrapAspect = wRect.width / wRect.height;
-  let renderW, renderH;
-  if (videoAspect > wrapAspect) { renderH = wRect.height; renderW = vW * (wRect.height / vH); } 
-  else { renderW = wRect.width; renderH = vH * (wRect.width / vW); }
-  
-  const boxX = r.x * wRect.width, boxY = r.y * wRect.height, boxW = r.w * wRect.width, boxH = r.h * wRect.height;
-  
-  let raw_w = (boxW / renderW) * vW, raw_h = (boxH / renderH) * vH;
-  let raw_x = (boxX / renderW) * vW, raw_y = (boxY / renderH) * vH;
+function cropRect(){const r=box.getBoundingClientRect(),w=wrap.getBoundingClientRect();return{x:(r.left-w.left)/w.width,y:(r.top-w.top)/w.height,w:r.width/w.width,h:r.height/w.height}}
 
-  const centerX = raw_x + (raw_w / 2), centerY = raw_y + (raw_h / 2);
-  const cropW = raw_w / z, cropH = raw_h / z;
-  const cropX = Math.max(0, Math.min(vW - cropW, centerX - (cropW / 2)));
-  const cropY = Math.max(0, Math.min(vH - cropH, centerY - (cropH / 2)));
+function makeCropCanvas(){if(!video.videoWidth||!video.videoHeight)return null;const r=cropRect(),z=Number($('zoom').value)||1;let sw=video.videoWidth*r.w/z,sh=video.videoHeight*r.h/z;const cx=video.videoWidth*(r.x+r.w/2),cy=video.videoHeight*(r.y+r.h/2);let sx=Math.max(0,Math.min(video.videoWidth-sw,cx-sw/2)),sy=Math.max(0,Math.min(video.videoHeight-sh,cy-sh/2));const scale=Math.min(3,2400/Math.max(sw,sh));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(sw*scale));c.height=Math.max(1,Math.round(sh*scale));const ctx=c.getContext('2d',{willReadFrequently:true});ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.filter='grayscale(1) contrast(1.45)';ctx.drawImage(video,sx,sy,sw,sh,0,0,c.width,c.height);ctx.filter='none';return c}
 
-  const targetWidth = 1200; 
-  const scaleFactor = targetWidth / cropW;
-  
-  const c=document.createElement('canvas');
-  c.width = targetWidth;
-  c.height = Math.round(cropH * scaleFactor);
-  
-  const ctx=c.getContext('2d',{willReadFrequently:true});
-  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-  ctx.filter='grayscale(1) contrast(1.45)';
-  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, c.width, c.height);
-  ctx.filter='none';
-  return c;
-}
+function extractLongDigits(text){const out=new Set();String(text||'').split(/\r?\n/).forEach(line=>{const groups=line.match(/\d+/g)||[];groups.forEach(g=>{if(g.length>10&&g.length<=18)out.add(g)});for(let i=0;i<groups.length;i++){let s='';for(let j=i;j<groups.length;j++){s+=groups[j];if(s.length>10&&s.length<=18)out.add(s);if(s.length>18)break}}});return [...out]}
 
-function extractLongDigits(text){
-  const out=new Set();
-  String(text||'').split(/\r?\n/).forEach(line=>{
-    const groups=line.match(/\d+/g)||[];
-    groups.forEach(g=>{if(g.length>10&&g.length<=18)out.add(g)});
-    for(let i=0;i<groups.length;i++){
-      let s='';
-      for(let j=i;j<groups.length;j++){
-        s+=groups[j];
-        if(s.length>10&&s.length<=18)out.add(s);
-        if(s.length>18)break;
-      }
-    }
-  });
-  return [...out];
-}
+async function ensureWorker(){if(ocrWorker)return ocrWorker;status('Menyiapkan OCR pertama kali…');ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')status('OCR membaca area hijau… '+Math.round((m.progress||0)*100)+'%')}});await ocrWorker.setParameters({tessedit_char_whitelist:'0123456789',tessedit_pageseg_mode:Tesseract.PSM.SPARSE_TEXT,preserve_interword_spaces:'1'});return ocrWorker}
 
-async function ensureWorker(){
-  if(ocrWorker)return ocrWorker;
-  status('Menyiapkan OCR…');
-  ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')status('OCR membaca area… '+Math.round((m.progress||0)*100)+'%')}});
-  await ocrWorker.setParameters({tessedit_char_whitelist:'0123456789',tessedit_pageseg_mode:Tesseract.PSM.SPARSE_TEXT,preserve_interword_spaces:'1'});
-  return ocrWorker;
-}
+async function scanLoop(token){if(!running||token!==loopToken)return;const canvas=makeCropCanvas();if(canvas){if('BarcodeDetector'in window&&!barcodeBusy){barcodeBusy=true;try{const fmts=await BarcodeDetector.getSupportedFormats();const d=new BarcodeDetector({formats:fmts.filter(x=>['code_128','code_39','code_93','ean_13','ean_8','upc_a','upc_e','itf','qr_code','data_matrix','pdf417'].includes(x))});const hits=await d.detect(canvas);(hits||[]).forEach(x=>addCandidate(x.rawValue,'Barcode'))}catch(e){}finally{barcodeBusy=false}}
 
-async function scanLoop(token){
-  if(!running||token!==loopToken)return;
-  const canvas=makeCropCanvas();
-  
-  if(canvas){
-    // Barcode Detector
-    if('BarcodeDetector'in window&&!barcodeBusy){
-      barcodeBusy=true;
-      try{
-        const fmts=await BarcodeDetector.getSupportedFormats();
-        const d=new BarcodeDetector({formats:fmts.filter(x=>['code_128','code_39','code_93','ean_13','ean_8','upc_a','upc_e','itf','qr_code','data_matrix','pdf417'].includes(x))});
-        const hits=await d.detect(canvas);
-        (hits||[]).forEach(x=>addCandidate(x.rawValue,'Barcode'));
-      }catch(e){}finally{barcodeBusy=false}
-    }
+if(!ocrBusy&&Date.now()-lastOcrAt>1800){ocrBusy=true;lastOcrAt=Date.now();try{const w=await ensureWorker();if(running&&token===loopToken){const res=await w.recognize(canvas);const txt=res?.data?.text||'';extractLongDigits(txt).forEach(v=>addCandidate(v,'OCR (>10 digit)'))}}catch(e){console.warn(e)}finally{ocrBusy=false}}}
 
-    // OCR
-    if(!ocrBusy&&Date.now()-lastOcrAt>2000){
-      ocrBusy=true; lastOcrAt=Date.now();
-      try{
-        const w=await ensureWorker();
-        if(running&&token===loopToken){
-          const res=await w.recognize(canvas);
-          const txt=res?.data?.text||'';
-          extractLongDigits(txt).forEach(v=>addCandidate(v,'OCR (>10 digit)'));
-        }
-      }catch(e){console.warn(e)}
-      finally{ocrBusy=false}
-    }
-  }
-  
-  if(running&&token===loopToken)setTimeout(()=>scanLoop(token),650);
-}
+if(running&&token===loopToken)setTimeout(()=>scanLoop(token),650)}
 
-async function startCamera(){
-  if(running)return;
-  $('startBtn').disabled=true;
-  status('Mengaktifkan kamera…');
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
-    video.srcObject=stream;
-    await video.play();
-    running=true;
-    $('stopBtn').disabled=false;
-    status('Kamera aktif. Geser kotak hijau ke label IMEI.');
-    const t=++loopToken;
-    scanLoop(t);
-  }catch(e){
-    status('Kamera gagal dibuka: '+(e.message||e)+'. Pastikan HTTPS dan izin kamera aktif.');
-    $('startBtn').disabled=false;
-  }
-}
+async function startCamera(){if(running)return;$('startBtn').disabled=true;status('Mengaktifkan kamera…');try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});video.srcObject=stream;await video.play();const setRatio=()=>{if(video.videoWidth&&video.videoHeight)wrap.style.aspectRatio=video.videoWidth+'/'+video.videoHeight};setRatio();video.onloadedmetadata=setRatio;running=true;$('stopBtn').disabled=false;status('Kamera aktif. Atur kotak hijau tepat di atas label IMEI.');const t=++loopToken;scanLoop(t)}catch(e){status('Kamera gagal dibuka: '+(e.message||e)+'. Pastikan HTTPS dan izin kamera aktif.');$('startBtn').disabled=false}}
 
-function stopCamera(){
-  running=false; loopToken++;
-  if(stream){stream.getTracks().forEach(t=>t.stop()); stream=null}
-  video.srcObject=null;
-  $('stopBtn').disabled=true; $('startBtn').disabled=false;
-  status('Kamera dijeda. Hasil tetap tersimpan.');
-}
+function stopCamera(){running=false;loopToken++;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}video.srcObject=null;$('stopBtn').disabled=true;$('startBtn').disabled=false;status('Kamera dijeda. Hasil tetap tersimpan.')}
 
-function choose(i){selected=values[i]?.value||''; render(); status('Dipilih: '+selected)}
-function clearResults(){values=[]; selected=''; render(); status('Hasil dibersihkan.')}
+function choose(i){selected=values[i]?.value||'';render();status('Dipilih: '+selected+'. Pastikan sesuai IMEI 1 pada dus.')}
 
-function sendValue(v){
-  v=String(v||'').trim(); if(!v)return status('Belum ada angka yang dipilih.');
-  if(!window.opener||window.opener.closed)return status('Buka pemindai dari tombol Scan di aplikasi stok.');
-  window.opener.postMessage({type:'STOK_KONTER_IMEI_SCANNED',imei:v},'*');
-  status('Hasil dikirim ke aplikasi stok.');
-  setTimeout(closeScanner,500);
-}
-function sendSelected(){sendValue(selected)}
-function sendManual(){sendValue($('manual').value)}
+function clearResults(){values=[];selected='';render();status('Hasil dibersihkan. Kamera '+(running?'tetap aktif.':'sedang berhenti.'))}
 
-async function closeScanner(){
-  stopCamera();
-  if(ocrWorker){try{await ocrWorker.terminate()}catch(e){} ocrWorker=null}
-  window.close();
-}
+function sendValue(v){v=String(v||'').trim();if(!v)return status('Belum ada angka yang dipilih.');if(!window.opener||window.opener.closed)return status('Buka pemindai dari tombol Scan di aplikasi stok.');window.opener.postMessage({type:'STOK_KONTER_IMEI_SCANNED',imei:v},'*');status('Hasil dikirim ke aplikasi stok.');setTimeout(closeScanner,500)}function sendSelected(){sendValue(selected)}function sendManual(){sendValue($('manual').value)}
 
-// Gestur kotak hijau
-let gesture=null;
-box.addEventListener('pointerdown',e=>{
-  e.preventDefault(); box.setPointerCapture(e.pointerId);
-  const r=box.getBoundingClientRect(), w=wrap.getBoundingClientRect();
-  gesture={mode:e.target.id==='resizeHandle'?'resize':'move',sx:e.clientX,sy:e.clientY,left:(r.left-w.left)/w.width,top:(r.top-w.top)/w.height,width:r.width/w.width,height:r.height/w.height};
-});
-box.addEventListener('pointermove',e=>{
-  if(!gesture)return;
-  const w=wrap.getBoundingClientRect(), dx=(e.clientX-gesture.sx)/w.width, dy=(e.clientY-gesture.sy)/w.height;
-  let l=gesture.left, t=gesture.top, ww=gesture.width, hh=gesture.height;
-  if(gesture.mode==='move'){
-    l=Math.max(0,Math.min(1-ww,l+dx)); t=Math.max(0,Math.min(1-hh,t+dy));
-  }else{
-    ww=Math.max(.22,Math.min(1-l,ww+dx)); hh=Math.max(.12,Math.min(1-t,hh+dy));
-  }
-  box.style.left=(l*100)+'%'; box.style.top=(t*100)+'%'; box.style.width=(ww*100)+'%'; box.style.height=(hh*100)+'%';
-});
-function endGesture(){gesture=null}
-box.addEventListener('pointerup',endGesture); box.addEventListener('pointercancel',endGesture);
+async function closeScanner(){stopCamera();if(ocrWorker){try{await ocrWorker.terminate()}catch(e){}ocrWorker=null}window.close()}
+
+// Crop box: drag anywhere inside; resize from bottom-right handle. Coordinates stay within preview.
+
+let gesture=null;function point(e){return{x:e.clientX,y:e.clientY}}box.addEventListener('pointerdown',e=>{e.preventDefault();box.setPointerCapture(e.pointerId);const r=box.getBoundingClientRect(),w=wrap.getBoundingClientRect();gesture={mode:e.target.id==='resizeHandle'?'resize':'move',sx:e.clientX,sy:e.clientY,left:(r.left-w.left)/w.width,top:(r.top-w.top)/w.height,width:r.width/w.width,height:r.height/w.height};});box.addEventListener('pointermove',e=>{if(!gesture)return;const w=wrap.getBoundingClientRect(),dx=(e.clientX-gesture.sx)/w.width,dy=(e.clientY-gesture.sy)/w.height;let l=gesture.left,t=gesture.top,ww=gesture.width,hh=gesture.height;if(gesture.mode==='move'){l=Math.max(0,Math.min(1-ww,l+dx));t=Math.max(0,Math.min(1-hh,t+dy))}else{ww=Math.max(.22,Math.min(1-l,ww+dx));hh=Math.max(.12,Math.min(1-t,hh+dy))}box.style.left=(l*100)+'%';box.style.top=(t*100)+'%';box.style.width=(ww*100)+'%';box.style.height=(hh*100)+'%'});function endGesture(){gesture=null}box.addEventListener('pointerup',endGesture);box.addEventListener('pointercancel',endGesture);
 
 render();
-</script>
-</body>
-</html>
+
+</script></body></html>
