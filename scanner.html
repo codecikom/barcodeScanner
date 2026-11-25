@@ -16,7 +16,7 @@ p{font-size:12px;line-height:1.45;color:#475569;margin:6px 0 10px}
 .camera-wrap{
   position:relative;
   width:100%;
-  height: 35vh; /* Tinggi pas di layar */
+  height: 35vh; /* Tinggi statis, tidak terlalu tinggi */
   min-height: 220px;
   max-height: 350px;
   background:#0f172a;
@@ -29,15 +29,13 @@ p{font-size:12px;line-height:1.45;color:#475569;margin:6px 0 10px}
   align-items: center;
 }
 
-/* Video dipotong (crop) 2.5x dan diletakkan di tengah */
+/* Video asli */
 #video{
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scale(2.5); /* Crop di tengah sebesar 2.5x */
-  transform-origin: center center;
   display:block;
-  pointer-events: none; /* Supaya gestur diambil oleh wadah */
+  pointer-events: none; 
 }
 
 /* Kotak hijau pemilih area */
@@ -65,6 +63,11 @@ button:disabled{opacity:.45}
 .green{background:#15803d}.gray{background:#475569}.red{background:#b91c1c}
 
 #status{padding:8px;border-radius:8px;background:#eff6ff;color:#1e40af;font-size:12px;line-height:1.4;margin:8px 0}
+
+.control{margin:8px 0}
+.control label{display:flex;justify-content:space-between;font-size:11px;font-weight:bold;color:#334155;margin-bottom:4px}
+.control input{width:100%;margin:0}
+
 #count{font-weight:bold;margin:10px 0 6px;font-size:13px}
 .item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #cbd5e1;border-radius:9px;margin:6px 0}
 .item.selected{border:2px solid #16a34a;background:#f0fdf4}
@@ -78,7 +81,7 @@ input[type=text]{width:100%;padding:10px;border:1px solid #94a3b8;border-radius:
 <body>
 <main>
   <h2>📷 Scan IMEI Manual</h2>
-  <p>Kamera sudah di-crop ke area tengah. Geser kotak hijau ke label IMEI.</p>
+  <p>Atur slider zoom agar tulisan di dalam kotak hijau terlihat lebih besar dan jelas.</p>
   
   <div class="actions">
     <button id="startBtn" onclick="startCamera()">Mulai Kamera</button>
@@ -90,6 +93,11 @@ input[type=text]{width:100%;padding:10px;border:1px solid #94a3b8;border-radius:
   <div class="camera-wrap" id="cameraWrap">
     <video id="video" autoplay playsinline muted></video>
     <div id="cropBox"><div class="handle" id="resizeHandle"></div></div>
+  </div>
+  
+  <div class="control">
+    <label><span>Zoom Kamera</span><span id="zoomLabel">1.0×</span></label>
+    <input id="zoom" type="range" min="1" max="4" step="0.5" value="1" oninput="updateZoomLabel(this.value)">
   </div>
   
   <div class="actions">
@@ -110,10 +118,10 @@ const $=id=>document.getElementById(id);
 let stream=null, running=false, loopToken=0, ocrWorker=null, ocrBusy=false, barcodeBusy=false, values=[], selected='', lastOcrAt=0;
 const video=$('video'), box=$('cropBox'), wrap=$('cameraWrap');
 
-// Skala Crop Visual (makin besar angkanya, makin dekat tampilannya)
-const VISUAL_CROP_SCALE = 2.5; 
-
 function status(t){$('status').textContent=t}
+function updateZoomLabel(v){
+  $('zoomLabel').textContent=Number(v).toFixed(1)+'×';
+}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 
 function render(){
@@ -135,15 +143,18 @@ function cropRect(){
   return {x:(r.left-w.left)/w.width, y:(r.top-w.top)/w.height, w:r.width/w.width, h:r.height/w.height};
 }
 
-// MENGHITUNG AREA CROP BERDASARKAN VISUAL YANG DI-CROP
+// MENGAMBIL GAMBAR BERDASARKAN AREA KOTAK HIJAU DAN SLIDER ZOOM
 function makeCropCanvas(){
   if(!video.videoWidth||!video.videoHeight)return null;
+  
   const r = cropRect();
+  const z = Number($('zoom').value) || 1;
+  
   const vW = video.videoWidth;
   const vH = video.videoHeight;
   const wRect = wrap.getBoundingClientRect();
   
-  // 1. Hitung ukuran video asli jika dimuat dengan object-fit: cover
+  // Kalkulasi seberapa besar video dirender di layar (object-fit: cover)
   const videoAspect = vW / vH;
   const wrapAspect = wRect.width / wRect.height;
   let renderW, renderH;
@@ -155,42 +166,37 @@ function makeCropCanvas(){
     renderH = vH * (wRect.width / vW);
   }
   
-  // 2. Terapkan skala visual crop (2.5x)
-  const scale = VISUAL_CROP_SCALE;
-  
-  // Posisi titik tengah container
-  const cx_render = wRect.width / 2;
-  const cy_render = wRect.height / 2;
-  
-  // 3. Posisi kotak hijau di layar
+  // Posisi pixel kotak hijau di layar
   const boxX = r.x * wRect.width;
   const boxY = r.y * wRect.height;
+  const boxW = r.w * wRect.width;
+  const boxH = r.h * wRect.height;
   
-  // 4. Konversi posisi kotak hijau ke koordinat video asli
-  // Karena video di-scale dari tengah, kita mundurkan perhitungannya
-  const startX_render = (boxX - cx_render) / scale + cx_render;
-  const startY_render = (boxY - cy_render) / scale + cy_render;
-  const width_render = (r.w * wRect.width) / scale;
-  const height_render = (r.h * wRect.height) / scale;
+  // Ubah posisi layar menjadi posisi pixel video asli
+  let sw = (boxW / renderW) * vW;
+  let sh = (boxH / renderH) * vH;
+  let sx = (boxX / renderW) * vW;
+  let sy = (boxY / renderH) * vH;
+
+  // Terapkan efek zoom pada area yang diambil
+  const baseCenterX = sx + (sw / 2);
+  const baseCenterY = sy + (sh / 2);
   
-  // 5. Konversi px render ke px asli video
-  let sx = (startX_render / renderW) * vW;
-  let sy = (startY_render / renderH) * vH;
-  let sw = (width_render / renderW) * vW;
-  let sh = (height_render / renderH) * vH;
+  sw = sw / z;
+  sh = sh / z;
+  
+  sx = Math.max(0, Math.min(vW - sw, baseCenterX - (sw / 2)));
+  sy = Math.max(0, Math.min(vH - sh, baseCenterY - (sh / 2)));
 
-  // Batasi agar tidak error keluar batas
-  sx = Math.max(0, Math.min(vW - sw, sx));
-  sy = Math.max(0, Math.min(vH - sh, sy));
-
-  // 6. Gambar ke Canvas
+  // Siapkan canvas untuk dikirim ke mesin pembaca
   const upscale = Math.min(3, 2400/Math.max(sw, sh));
   const c=document.createElement('canvas');
   c.width=Math.max(1,Math.round(sw*upscale)); 
   c.height=Math.max(1,Math.round(sh*upscale));
   
   const ctx=c.getContext('2d',{willReadFrequently:true});
-  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.imageSmoothingEnabled=true; 
+  ctx.imageSmoothingQuality='high';
   ctx.filter='grayscale(1) contrast(1.45)';
   ctx.drawImage(video, sx, sy, sw, sh, 0, 0, c.width, c.height);
   ctx.filter='none';
@@ -218,7 +224,7 @@ function extractLongDigits(text){
 async function ensureWorker(){
   if(ocrWorker)return ocrWorker;
   status('Menyiapkan OCR…');
-  ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')status('OCR membaca area hijau… '+Math.round((m.progress||0)*100)+'%')}});
+  ocrWorker=await Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')status('OCR membaca area… '+Math.round((m.progress||0)*100)+'%')}});
   await ocrWorker.setParameters({tessedit_char_whitelist:'0123456789',tessedit_pageseg_mode:Tesseract.PSM.SPARSE_TEXT,preserve_interword_spaces:'1'});
   return ocrWorker;
 }
@@ -263,7 +269,7 @@ async function startCamera(){
     await video.play();
     running=true;
     $('stopBtn').disabled=false;
-    status('Kamera aktif. Area tengah sudah di-crop.');
+    status('Kamera aktif. Geser kotak hijau ke label IMEI.');
     const t=++loopToken;
     scanLoop(t);
   }catch(e){
